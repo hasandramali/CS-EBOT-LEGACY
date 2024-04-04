@@ -1,8 +1,8 @@
-FROM 32bit/ubuntu:16.04
+FROM 32bit/ubuntu:16.10
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
                 curl git ca-certificates ruby \
-                build-essential devscripts debhelper fakeroot ruby reprepro libpam0g-dev \
+                build-essential g++ gcc devscripts debhelper fakeroot ruby reprepro libpam0g-dev \
                 libreadline6-dev zlib1g-dev libssl-dev expect \
                 --no-install-recommends
 
