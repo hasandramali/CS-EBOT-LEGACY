@@ -18,6 +18,10 @@
 #endif
 #endif
 #include <stdarg.h>
+#ifdef __linux__ 
+#include <new>
+extern int g_numWaypoints;
+#endif
 
 template <typename T>
 inline bool IsValidWaypoint(const T index)
