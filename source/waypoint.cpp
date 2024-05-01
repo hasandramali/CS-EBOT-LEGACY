@@ -1700,8 +1700,8 @@ bool Waypoint::Load(void)
     safedel(m_waypointDisplayTime);
 
     int i;
-    const char* path = CheckSubfolderFile();
-    File fp(path, "rb");
+    const char* waypointFilePath = CheckSubfolderFile();
+    File fp(waypointFilePath, "rb");
     if (fp.IsValid())
     {
         WaypointHeader header;
@@ -2004,7 +2004,7 @@ void Waypoint::Save(void)
     header.fileVersion = static_cast<int32_t>(FV_WAYPOINT);
     header.pointNumber = static_cast<int32_t>(g_numWaypoints);
 
-    File fp(path, "wb");
+    File fp(waypointFilePath, "wb");
 
     // file was opened
     if (fp.IsValid())
@@ -2017,7 +2017,7 @@ void Waypoint::Save(void)
         for (i = 0; i < g_numWaypoints; i++)
             paths[i] = m_paths[i];
 
-        i = Compressor::Compress(path, (uint8_t*)&header, sizeof(WaypointHeader), (uint8_t*)paths, g_numWaypoints * sizeof(Path));
+        i = Compressor::Compress(waypointFilePath, (uint8_t*)&header, sizeof(WaypointHeader), (uint8_t*)paths, g_numWaypoints * sizeof(Path));
         if (i == 1)
         {
             ServerPrint("Error: Cannot Save Waypoints");
@@ -2036,31 +2036,28 @@ void Waypoint::Save(void)
         AddLogEntry(LOG_ERROR, "Error writing '%s' waypoint file", GetMapName());
 }
 
-char* Waypoint::CheckSubfolderFile(void)
+const char* Waypoint::CheckSubfolderFile(void)
 {
     graph = false;
-    char* returnFile = FormatBuffer("%s/%s.ewp", GetWaypointDir(), GetMapName());
-    if (TryFileOpen(returnFile))
-        return returnFile;
+    static char waypointFilePath[256]{};
+
+    const char* waypointDir = GetWaypointDir();
+    const char* mapName = GetMapName();
+
+    sprintf(waypointFilePath, "%s%s.ewp", waypointDir, mapName);
+
+    if (TryFileOpen(waypointFilePath))
+        return waypointFilePath;
     else
     {
         
-        returnFile = FormatBuffer("%s/%s.graph", GetWaypointDir(), GetMapName());
-        if (TryFileOpen(returnFile))
-        {
-            graph = true;
-            return returnFile;
-        }
-        else
-        {
-            
-            returnFile = FormatBuffer("%s/%s.pwf", GetWaypointDir(), GetMapName());
-            if (TryFileOpen(returnFile))
-                return returnFile;
-        }
+        sprintf(waypointFilePath, "%s%s.pwf", waypointDir, mapName);
+        if (TryFileOpen(waypointFilePath))
+            return waypointFilePath;
     }
-
-    return FormatBuffer("%s%s.ewp", GetWaypointDir(), GetMapName());
+    
+    sprintf(waypointFilePath, "%s%s.ewp", waypointDir, mapName);
+    return waypointFilePath;
 }
 
 // this function returns 2D traveltime to a position
