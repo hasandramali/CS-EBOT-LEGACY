@@ -512,7 +512,7 @@ const char* GetField(const char* string, int fieldId, bool endLine)
 		field[cstrlen(field) - 1] = 0;
 
 	cstrtrim(field);
-	return field; // returns the wanted field
+	return &field[0]; // returns the wanted field
 }
 
 const char* GetModName(void)
@@ -1304,7 +1304,7 @@ void ServerCommand(const char* format, ...)
 
 char* GetEntityName(edict_t* entity)
 {
-	static char entityName[256];
+	static char entityName[32];
 	if (FNullEnt(entity))
 		cstrcpy(entityName, "NULL");
 	else if (IsValidPlayer(entity))
@@ -1317,7 +1317,7 @@ char* GetEntityName(edict_t* entity)
 // this function gets the map name and store it in the map_name global string variable.
 const char* GetMapName(void)
 {
-	static char mapName[256];
+	static char mapName[32];
 	cstrncpy(mapName, STRING(g_pGlobals->mapname), sizeof(mapName));
 	return mapName; // and return a pointer to it
 }
@@ -1339,9 +1339,9 @@ bool OpenConfig(const char* fileName, char* errorIfNotExists, File* outFile)
 
 const char* GetWaypointDir(void)
 {
-	static char waypointDir[256]{};
-	sprintf(waypointDir, "%s/addons/ebot/waypoints/", GetModName());
-	return waypointDir;
+	static char wpDir[256]{};
+	sprintf(wpDir, "%s/addons/ebot/waypoints/", GetModName());
+	return &wpDir[0];
 }
 
 // this function tells the engine that a new server command is being declared, in addition
