@@ -1719,7 +1719,7 @@ bool Waypoint::Load(void)
         {
             g_numWaypoints = header.pointNumber;
             Path paths[g_numWaypoints];
-            const int result = Compressor::Uncompress(path, sizeof(WaypointHeader), (uint8_t*)paths, g_numWaypoints * sizeof(Path));
+            const int result = Compressor::Uncompress(waypointFilePath, sizeof(WaypointHeader), (uint8_t*)paths, g_numWaypoints * sizeof(Path));
             if (result != -1)
             {
                 for (i = 0; i < g_numWaypoints; i++)
@@ -1731,7 +1731,7 @@ bool Waypoint::Load(void)
             g_numWaypoints = header.pointNumber;
             Path paths[g_numWaypoints];
             Path temp;
-            const int result = Compressor::Uncompress(path, sizeof(WaypointHeader), (uint8_t*)paths, g_numWaypoints * sizeof(Path));
+            const int result = Compressor::Uncompress(waypointFilePath, sizeof(WaypointHeader), (uint8_t*)paths, g_numWaypoints * sizeof(Path));
             if (result != -1)
             {
                 for (i = 0; i < g_numWaypoints; i++)
