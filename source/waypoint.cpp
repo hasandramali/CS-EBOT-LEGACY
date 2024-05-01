@@ -2017,7 +2017,7 @@ void Waypoint::Save(void)
         for (i = 0; i < g_numWaypoints; i++)
             paths[i] = m_paths[i];
 
-        i = Compressor::Compress(waypointFilePath, (uint8_t*)&header, sizeof(WaypointHeader), (uint8_t*)paths, g_numWaypoints * sizeof(Path));
+        i = Compressor::Compress(waypointFilePath, reinterpret_cast<uint8_t*>(&header), sizeof(WaypointHeader), reinterpret_cast<uint8_t*>(paths), g_numWaypoints * sizeof(Path));
         if (i == 1)
         {
             ServerPrint("Error: Cannot Save Waypoints");
