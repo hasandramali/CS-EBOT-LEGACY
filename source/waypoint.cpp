@@ -1989,7 +1989,7 @@ void Waypoint::Save(void)
     cstrcpy(header.author, waypointAuthor);
 
     // remember the original waypoint author
-    const char* path = CheckSubfolderFile();
+    const char* waypointFilePath = CheckSubfolderFile();
     File rf(waypointFilePath, "rb");
     if (rf.IsValid())
     {
