@@ -1296,7 +1296,7 @@ public:
 
 	inline Vector GetBombPosition(void) { return m_foundBombOrigin; }
 	void SetBombPosition(const bool shouldReset = false);
-	char* CheckSubfolderFile(void);
+	const char* CheckSubfolderFile(void);
 };
 
 #define g_botManager BotControl::GetObjectPtr()
@@ -1335,9 +1335,9 @@ extern bool OpenConfig(const char* fileName, char* errorIfNotExists, File* outFi
 extern bool FindNearestPlayer(void** holder, edict_t* to, const float searchDistance = 4096.0f, const bool sameTeam = false, const bool needBot = false, const bool needAlive = false, const bool needDrawn = false);
 
 extern char* GetEntityName(edict_t* entity);
-extern char* GetMapName(void);
-extern char* GetWaypointDir(void);
-extern char* GetModName(void);
+extern const char* GetMapName(void);
+extern const char* GetWaypointDir(void);
+extern const char* GetModName(void);
 extern const char* GetField(const char* string, int fieldId, const bool endLine = false);
 
 extern Vector GetEntityOrigin(edict_t* ent);
