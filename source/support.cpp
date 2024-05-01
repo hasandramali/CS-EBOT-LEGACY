@@ -515,7 +515,7 @@ const char* GetField(const char* string, int fieldId, bool endLine)
 	return field; // returns the wanted field
 }
 
-char* GetModName(void)
+const char* GetModName(void)
 {
 	static char modName[256];
 	GET_GAME_DIR(modName); // ask the engine for the MOD directory path
@@ -1315,7 +1315,7 @@ char* GetEntityName(edict_t* entity)
 }
 
 // this function gets the map name and store it in the map_name global string variable.
-char* GetMapName(void)
+const char* GetMapName(void)
 {
 	static char mapName[256];
 	cstrncpy(mapName, STRING(g_pGlobals->mapname), sizeof(mapName));
@@ -1337,9 +1337,11 @@ bool OpenConfig(const char* fileName, char* errorIfNotExists, File* outFile)
 	return true;
 }
 
-char* GetWaypointDir(void)
+const char* GetWaypointDir(void)
 {
-	return FormatBuffer("%s/addons/ebot/waypoints/", GetModName());
+	static char waypointDir[256]{};
+	sprintf(waypointDir, "%s/addons/ebot/waypoints/", GetModName());
+	return waypointDir;
 }
 
 // this function tells the engine that a new server command is being declared, in addition
