@@ -1990,7 +1990,7 @@ void Waypoint::Save(void)
 
     // remember the original waypoint author
     const char* path = CheckSubfolderFile();
-    File rf(path, "rb");
+    File rf(waypointFilePath, "rb");
     if (rf.IsValid())
     {
         rf.Read(&header, sizeof(header));
