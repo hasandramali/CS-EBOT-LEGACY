@@ -22,4 +22,4 @@ jobs:
      uses: actions/upload-artifact@v3
      with:
           name: ebot-legacy-linux
-          path: project/ebot/ebot.so
+          path: project/build/ebot/ebot.so
