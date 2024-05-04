@@ -29,21 +29,19 @@
 #include <core.h>
 
 ConVar ebot_chat("ebot_chat", "1");
-ConVar ebot_chat_percent("ebot_chat_percent", "40");
 
 // this function strips 'clan' tags specified below in given string buffer
 void StripTags(char* buffer)
 {
     // first three tags for Enhanced POD-Bot (e[POD], 3[POD], E[POD])
-    char* tagOpen[] = { "e[P", "3[P", "E[P", "-=", "-[", "-]", "-}", "-{", "<[", "<]", "[-", "]-", "{-", "}-", "[[", "[", "{", "]", "}", "<", ">", "-", "|", "=", "+" };
-    char* tagClose[] = { "]", "]", "]", "=-", "]-", "[-", "{-", "}-", "]>", "[>", "-]", "-[", "-}", "-{", "]]", "]", "}", "[", "{", ">", "<", "-", "|", "=", "+" };
+    char* tagOpen[] = { "e[P", "3[P", "E[P", "-=", "-[", "-]", "-}", "-{", "<[", "<]", "[-", "]-", "{-", "}-", "[[", "[", "{", "]", "}", "<", ">", "-", "|", "=", "+", "(" };
+    char* tagClose[] = { "]", "]", "]", "=-", "]-", "[-", "{-", "}-", "]>", "[>", "-]", "-[", "-}", "-{", "]]", "]", "}", "[", "{", ">", "<", "-", "|", "=", "+", ")" };
 
     int index, fieldStart, fieldStop, i;
     const int length = cstrlen(buffer); // get length of string
-    int closeSize;
 
     // foreach known tag...
-    const auto size = ARRAYSIZE_HLSDK(tagOpen);
+    auto size = ARRAYSIZE_HLSDK(tagOpen);
     for (index = 0; index < size; index++)
     {
         fieldStart = cstrstr(buffer, tagOpen[index]) - buffer; // look for a tag start
@@ -56,9 +54,9 @@ void StripTags(char* buffer)
             // have we found a tag stop?
             if ((fieldStop > fieldStart) && (fieldStop < 32))
             {
-                closeSize = cstrlen(tagClose[index]);
-                for (i = fieldStart; i < length - (fieldStop + closeSize - fieldStart); i++)
-                    buffer[i] = buffer[i + (fieldStop + closeSize - fieldStart)]; // overwrite the buffer with the stripped string
+                const int close = cstrlen(tagClose[index]);
+                for (i = fieldStart; i < length - (fieldStop + close - fieldStart); i++)
+                    buffer[i] = buffer[i + (fieldStop + close - fieldStart)]; // overwrite the buffer with the stripped string
 
                 buffer[i] = 0x0; // terminate the string
             }
@@ -66,36 +64,37 @@ void StripTags(char* buffer)
     }
 
     // have we stripped too much (all the stuff)?
-    if (!cstrlen(buffer))
+    if (cstrlen(buffer) > 0)
     {
         cstrtrim(buffer); // if so, string is just a tag
 
         // strip just the tag part..
+        size = ARRAYSIZE_HLSDK(tagOpen);
         for (index = 0; index < size; index++)
         {
             fieldStart = cstrstr(buffer, tagOpen[index]) - buffer; // look for a tag start
 
             // have we found a tag start?
-            if (fieldStart > -1 && fieldStart < 32)
+            if (fieldStart >= 0 && fieldStart < 32)
             {
-                closeSize = cstrlen(tagOpen[index]);
-                fieldStop = fieldStart + closeSize; // set the tag stop
+                const int open = cstrlen(tagOpen[index]);
+                fieldStop = fieldStart + open; // set the tag stop
 
-                for (i = fieldStart; i < length - closeSize; i++)
-                    buffer[i] = buffer[i + closeSize]; // overwrite the buffer with the stripped string
+                for (i = fieldStart; i < length - open; i++)
+                    buffer[i] = buffer[i + open]; // overwrite the buffer with the stripped string
 
                 buffer[i] = 0x0; // terminate the string
 
                 fieldStart = cstrstr(buffer, tagClose[index]) - buffer; // look for a tag stop
 
                 // have we found a tag stop ?
-                if (fieldStart > -1 && fieldStart < 32)
+                if (fieldStart >= 0 && fieldStart < 32)
                 {
-                    closeSize = cstrlen(tagClose[index]);
-                    fieldStop = fieldStart + closeSize; // set the tag stop
+                    const int close = cstrlen(tagClose[index]);
+                    fieldStop = fieldStart + close; // set the tag stop
 
-                    for (i = fieldStart; i < length - closeSize; i++)
-                        buffer[i] = buffer[i + closeSize]; // overwrite the buffer with the stripped string
+                    for (i = fieldStart; i < length - close; i++)
+                        buffer[i] = buffer[i + close]; // overwrite the buffer with the stripped string
 
                     buffer[i] = 0; // terminate the string
                 }
@@ -109,35 +108,34 @@ void StripTags(char* buffer)
 // this function humanize player name (i.e. trim clan and switch to lower case (sometimes))
 char* HumanizeName(char* name)
 {
-    static char outputName[32]; // create return name buffer
+    char outputName[256]; // create return name buffer
     cstrncpy(outputName, name, sizeof(outputName)); // copy name to new buffer
 
     // drop tag marks, 75 percent of time
-    if (chanceof(75))
+    if (CRandomInt(1, 100) < 75)
         StripTags(outputName);
     else
         cstrtrim(outputName);
 
     // sometimes switch name to lower characters
-    if (chanceof(50))
+    if (CRandomInt(1, 100) < 50)
     {
-        int i;
-        const int maxLength = cstrlen(outputName);
-        for (i = 0; i < maxLength; i++)
-            outputName[i] = static_cast<char>(ctolower(outputName[i])); // to lower case
+        size_t i;
+        for (i = 0; i < cstrlen(outputName); i++)
+            outputName[i] = ctolower(outputName[i]); // to lower case
     }
 
-    return outputName; // return terminated string
+    return &outputName[0]; // return terminated string
 }
 
 // this function humanize chat string to be more handwritten
 void HumanizeChat(char* buffer)
 {
-    int i;
     int length = cstrlen(buffer); // get length of string
+    int i;
 
     // sometimes switch text to lowercase
-    if (chanceof(50))
+    if (CRandomInt(1, 2) == 1)
     {
         for (i = 0; i < length; i++)
             buffer[i] = static_cast<char>(ctolower(buffer[i])); // switch to lowercase
@@ -146,9 +144,9 @@ void HumanizeChat(char* buffer)
     if (length > 15)
     {
         // "length / 2" percent of time drop a character
-        if (crandomint(1, 100) < (length / 2))
+        if (CRandomInt(1, 100) < (length / 2))
         {
-            const int pos = crandomint((length / 8), length - (length / 8)); // chose random position in string
+            const int pos = CRandomInt((length / 8), length - (length / 8)); // chose random position in string
             for (i = pos; i < length - 1; i++)
                 buffer[i] = buffer[i + 1]; // overwrite the buffer with stripped string
 
@@ -157,11 +155,10 @@ void HumanizeChat(char* buffer)
         }
 
         // "length" / 4 precent of time swap character
-        if (crandomint(1, 100) < (length / 4))
+        if (CRandomInt(1, 100) < (length / 4))
         {
-            const int pos = crandomint((length / 8), ((3 * length) / 8)); // choose random position in string
+            const int pos = CRandomInt((length / 8), ((3 * length) / 8)); // choose random position in string
             const char ch = buffer[pos]; // swap characters
-
             buffer[pos] = buffer[pos + 1];
             buffer[pos + 1] = ch;
         }
@@ -173,7 +170,7 @@ void HumanizeChat(char* buffer)
 // this function parses messages from the botchat, replaces keywords and converts names into a more human style
 void Bot::PrepareChatMessage(char* text)
 {
-    if (IsNullString(text))
+    if (!ebot_chat.GetBool() || IsNullString(text))
         return;
 
     cmemset(&m_tempStrings, 0, sizeof(m_tempStrings));
@@ -182,6 +179,7 @@ void Bot::PrepareChatMessage(char* text)
     char* pattern = text;
 
     edict_t* talkEntity = nullptr;
+
     while (pattern != nullptr)
     {
         // all replacement placeholders start with a %
@@ -198,7 +196,7 @@ void Bot::PrepareChatMessage(char* text)
             // player with most frags?
             if (*pattern == 'f')
             {
-                int frags, highestFrags = -99999; // just pick some start value
+                int highestFrags = -99999; // just pick some start value
                 edict_t* entity = nullptr;
 
                 for (const auto& client : g_clients)
@@ -212,7 +210,8 @@ void Bot::PrepareChatMessage(char* text)
                     if (!(client.flags & CFLAG_USED) || client.ent == pev->pContainingEntity)
                         continue;
 
-                    frags = static_cast<int>(client.ent->v.frags);
+                    const int frags = static_cast<int>(client.ent->v.frags);
+
                     if (frags > highestFrags)
                     {
                         highestFrags = frags;
@@ -221,8 +220,9 @@ void Bot::PrepareChatMessage(char* text)
                 }
 
                 talkEntity = entity;
+
                 if (!FNullEnt(talkEntity))
-                    cstrcat(m_tempStrings, HumanizeName(GetEntityName(talkEntity)));
+                    cstrcat(m_tempStrings, HumanizeName(const_cast<char*>(GetEntityName(talkEntity))));
             }
             // mapname?
             else if (*pattern == 'm')
@@ -237,8 +237,9 @@ void Bot::PrepareChatMessage(char* text)
             else if (*pattern == 's')
             {
                 talkEntity = INDEXENT(m_sayTextBuffer.entityIndex);
+
                 if (!FNullEnt(talkEntity))
-                    strcat(m_tempStrings, HumanizeName(GetEntityName(talkEntity)));
+                    cstrcat(m_tempStrings, HumanizeName(const_cast<char*>(GetEntityName(talkEntity))));
             }
             // teammate alive?
             else if (*pattern == 't')
@@ -268,7 +269,7 @@ void Bot::PrepareChatMessage(char* text)
                         talkEntity = entity;
 
                     if (!FNullEnt(talkEntity))
-                        cstrcat(m_tempStrings, HumanizeName(GetEntityName(talkEntity)));
+                        cstrcat(m_tempStrings, HumanizeName(const_cast<char*>(GetEntityName(talkEntity))));
                 }
                 else // no teammates alive...
                 {
@@ -292,7 +293,7 @@ void Bot::PrepareChatMessage(char* text)
                         talkEntity = entity;
 
                         if (!FNullEnt(talkEntity))
-                            cstrcat(m_tempStrings, HumanizeName(GetEntityName(talkEntity)));
+                            cstrcat(m_tempStrings, HumanizeName(const_cast<char*>(GetEntityName(talkEntity))));
                     }
                 }
             }
@@ -320,7 +321,7 @@ void Bot::PrepareChatMessage(char* text)
                     talkEntity = entity;
 
                     if (!FNullEnt(talkEntity))
-                        cstrcat(m_tempStrings, HumanizeName(GetEntityName(talkEntity)));
+                        cstrcat(m_tempStrings, HumanizeName(const_cast<char*>(GetEntityName(talkEntity))));
                 }
                 else // no teammates alive...
                 {
@@ -344,7 +345,7 @@ void Bot::PrepareChatMessage(char* text)
                         talkEntity = entity;
 
                         if (!FNullEnt(talkEntity))
-                            cstrcat(m_tempStrings, HumanizeName(GetEntityName(talkEntity)));
+                            cstrcat(m_tempStrings, HumanizeName(const_cast<char*>(GetEntityName(talkEntity))));
                     }
                 }
             }
@@ -352,21 +353,21 @@ void Bot::PrepareChatMessage(char* text)
             {
                 if (g_gameVersion == CSVER_CZERO)
                 {
-                    if (crandomint(1, 10) < 4)
+                    if (CRandomInt(1, 10) < 4)
                         cstrcat(m_tempStrings, "cscz");
                     else
                         cstrcat(m_tempStrings, "Condition Zero");
                 }
-                else if (g_gameVersion == CSVER_CSTRIKE)
+                else if (g_gameVersion == CSVER_CSTRIKE || g_gameVersion == CSVER_VERYOLD)
                 {
-                    if (crandomint(1, 10) < 4)
+                    if (CRandomInt(1, 10) < 4)
                         cstrcat(m_tempStrings, "cs 1.6");
                     else
                         cstrcat(m_tempStrings, "Counter-Strike");
                 }
                 else if (g_gameVersion == HALFLIFE)
                 {
-                    if (crandomint(1, 10) < 4)
+                    if (CRandomInt(1, 10) < 4)
                         cstrcat(m_tempStrings, "hl");
                     else
                         cstrcat(m_tempStrings, "Half-Life");
@@ -377,8 +378,9 @@ void Bot::PrepareChatMessage(char* text)
             else if (*pattern == 'v')
             {
                 talkEntity = m_lastVictim;
+
                 if (!FNullEnt(talkEntity))
-                    cstrcat(m_tempStrings, HumanizeName(GetEntityName(talkEntity)));
+                    cstrcat(m_tempStrings, HumanizeName(const_cast<char*>(GetEntityName(talkEntity))));
             }
 
             pattern++;
@@ -388,54 +390,34 @@ void Bot::PrepareChatMessage(char* text)
 
     // let the bots make some mistakes...
     char tempString[160];
-    cstrncpy(tempString, textStart, 159);
-
+    cstrncpy(tempString, textStart, sizeof(tempString));
     HumanizeChat(tempString);
     cstrcat(m_tempStrings, tempString);
 }
 
 // this function checks is string contain keyword, and generates relpy to it
-bool CheckKeywords(char* tempMessage, char* reply)
+bool Bot::CheckKeywords(char* tempMessage, char* reply)
 {
-    if (IsNullString(tempMessage))
+    if (!ebot_chat.GetBool() || IsNullString(tempMessage))
         return false;
 
-    uint16_t i, j, k;
-    for (i = 0; i < g_replyFactory.Size(); i++)
+    ITERATE_ARRAY(g_replyFactory, i)
     {
-        for (j = 0; j < g_replyFactory[i].keywords.GetElementNumber(); j++)
+        ITERATE_ARRAY(g_replyFactory[i].keywords, j)
         {
             // check is keyword has occurred in message
-            if (cstrstr(tempMessage, g_replyFactory[i].keywords[j]) != nullptr)
+            if (cstrstr(tempMessage, g_replyFactory[i].keywords[j].GetBuffer()) != nullptr)
             {
-                if (g_replyFactory[i].usedReplies.GetElementNumber() >= g_replyFactory[i].replies.GetElementNumber() / 2)
-                    g_replyFactory[i].usedReplies.RemoveAll();
-
-                bool replyUsed = false;
-                String& generatedReply = g_replyFactory[i].replies.GetRandomElement();
-
-                // don't say this twice
-                for (k = 0; k < g_replyFactory[i].usedReplies.GetElementNumber(); k++)
-                {
-                    if (cstrstr(g_replyFactory[i].usedReplies[k], generatedReply) != nullptr)
-                        replyUsed = true;
-                }
-
-                // reply not used, so use it
-                if (!replyUsed)
-                {
-                    cstrcpy(reply, generatedReply); // update final buffer
-                    g_replyFactory[i].usedReplies.Push(generatedReply); // add to ignore list
-                    return true;
-                }
+                cstrcpy(reply, g_replyFactory[i].replies.GetRandomElement()); // update final buffer
+                return true;
             }
         }
     }
 
-    // didn't find a keyword?
-    if (chanceof(ebot_chat_percent.GetInt()))
+    // didn't find a keyword? 40% of the time use some universal reply
+    if (ChanceOf(40) && !g_chatFactory[CHAT_NOKW].IsEmpty())
     {
-        cstrcpy(reply, g_chatFactory[CHAT_NOKW].GetRandomElement());
+        cstrcpy(reply, g_chatFactory[CHAT_NOKW].GetRandomElement().GetBuffer());
         return true;
     }
 
@@ -446,14 +428,12 @@ bool CheckKeywords(char* tempMessage, char* reply)
 bool Bot::ParseChat(char* reply)
 {
     char tempMessage[512];
-    cstrcpy(tempMessage, m_sayTextBuffer.sayText); // copy to safe place
-
-    int i;
-    const int maxLength = cstrlen(tempMessage);
+    cstrncpy(tempMessage, m_sayTextBuffer.sayText, sizeof(tempMessage)); // copy to safe place
 
     // text to uppercase for keyword parsing
-    for (i = 0; i < maxLength; i++)
-        tempMessage[i] = static_cast<char>(ctoupper(tempMessage[i]));
+    size_t i;
+    for (i = 0; i < cstrlen(tempMessage); i++)
+        tempMessage[i] = ctoupper(tempMessage[i]);
 
     return CheckKeywords(tempMessage, reply);
 }
@@ -465,24 +445,20 @@ bool Bot::RepliesToPlayer(void)
     {
         char text[256];
 
-        // check is time to chat is good
-        if (m_sayTextBuffer.timeNextChat < g_pGlobals->time)
+        if (ParseChat(text))
         {
-            if (crandomint(1, 100) < m_sayTextBuffer.chatProbability + crandomint(2, 10) && ParseChat(text))
-            {
-                PrepareChatMessage(text);
-                PushMessageQueue(CMENU_SAY);
-
-                m_sayTextBuffer.entityIndex = -1;
-                m_sayTextBuffer.sayText[0] = 0;
-                m_sayTextBuffer.timeNextChat = g_pGlobals->time + m_sayTextBuffer.chatDelay;
-
-                return true;
-            }
+            PrepareChatMessage(text);
+            PushMessageQueue(CMENU_SAY);
 
             m_sayTextBuffer.entityIndex = -1;
-            m_sayTextBuffer.sayText[0] = 0;
+            m_sayTextBuffer.sayText[0] = 0x0;
+            m_sayTextBuffer.timeNextChat = engine->GetTime() + m_sayTextBuffer.chatDelay;
+
+            return true;
         }
+
+        m_sayTextBuffer.entityIndex = -1;
+        m_sayTextBuffer.sayText[0] = 0x0;
     }
 
     return false;
@@ -490,11 +466,15 @@ bool Bot::RepliesToPlayer(void)
 
 void Bot::ChatSay(const bool teamSay, const char* text, ...)
 {
-    // someone is using FakeClientCommand, don't break it
+    // someone is using FakeClientCommand, don't break it.
     if (g_isFakeCommand)
         return;
 
     if (IsNullString(text))
+        return;
+
+    // block looping same message
+    if (!IsNullString(m_lastStrings) && m_lastStrings == text)
         return;
 
     edict_t* me = GetEntity();
@@ -504,5 +484,6 @@ void Bot::ChatSay(const bool teamSay, const char* text, ...)
         return;
 
     FakeClientCommand(me, "%s \"%s\"", teamSay ? "say_team" : "say", text);
+    cstrncpy(m_lastStrings, text, sizeof(m_lastStrings));
     m_lastChatEnt = me;
 }

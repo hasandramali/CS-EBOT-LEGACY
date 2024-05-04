@@ -31,6 +31,7 @@
 #include <float.h>
 #include <time.h>
 #include <stdarg.h>
+#include <new>
 
 #pragma warning (disable : 4996) // get rid of this
 
@@ -69,7 +70,7 @@ typedef unsigned short uint16_t;
 //
 // This macro is a null vector.
 //
-#define nullvec Vector::GetNull()
+#define nullvec Vector::GetNull ()
 
 //
 // Function: FormatBuffer
@@ -87,10 +88,12 @@ inline char* FormatBuffer(char* format, ...)
 {
     static char buffer[1024];
     va_list ap;
+
     va_start(ap, format);
     vsprintf(buffer, format, ap);
     va_end(ap);
-    return buffer;
+
+    return &buffer[0];
 }
 
 //
@@ -208,7 +211,7 @@ namespace Math
     // Remarks:
     //   This eliminates Intel C++ Compiler's warning about float equality/inquality.
     //
-    inline bool FltZero(const float entry)
+    inline bool FltZero(float entry)
     {
         return cabsf(entry) < MATH_ONEPSILON;
     }
@@ -231,7 +234,7 @@ namespace Math
     // Remarks:
     //   This eliminates Intel C++ Compiler's warning about float equality/inquality.
     //
-    inline bool FltEqual(const float entry1, const float entry2)
+    inline bool FltEqual(float entry1, float entry2)
     {
         return cabsf(entry1 - entry2) < MATH_EQEPSILON;
     }
@@ -250,7 +253,7 @@ namespace Math
     // See Also:
     //   <DegreeToRadian>
     //
-    inline float RadianToDegree(const float radian)
+    inline float RadianToDegree(float radian)
     {
         return radian * MATH_R2D;
     }
@@ -269,7 +272,7 @@ namespace Math
     // See Also:
     //   <RadianToDegree>
     //
-    inline float DegreeToRadian(const float degree)
+    inline float DegreeToRadian(float degree)
     {
         return degree * MATH_D2R;
     }
@@ -285,9 +288,9 @@ namespace Math
     // Returns:
     //   Resulting angle.
     //
-    inline float AngleMod(const float angle)
+    inline float AngleMod(float angle)
     {
-        return 0.00549316406f * (static_cast<int>(angle * 182.044444444f) & 65535);
+        return 360.0f / 65536.0f * (static_cast <int> (angle * (65536.0f / 360.0f)) & 65535);
     }
 
     //
@@ -303,11 +306,9 @@ namespace Math
     //
     inline float AngleNormalize(float angle)
     {
-        angle -= 360.0f * croundf(angle * 0.00277777777f);
-        if (angle > 180.0f)
-            angle -= 360.0f;
-        else if (angle < -180.0f)
-            angle += 360.0f;
+        angle = angle - 360.0f * croundf(angle / 360.0f);
+        while (angle > 180.0f) angle -= 360.0f;
+        while (angle < -180.0f) angle += 360.0f;
         return angle;
     }
 }
@@ -340,7 +341,9 @@ public:
     // Parameters:
     //	  scaler - Value for axises.
     //
-    inline Vector(const float scaler = 0.0f) : x(scaler), y(scaler), z(scaler) {}
+    inline Vector(float scaler = 0.0f) : x(scaler), y(scaler), z(scaler)
+    {
+    }
 
     //
     // Function: Vector
@@ -352,7 +355,9 @@ public:
     //	  inputY - Input Y axis.
     //	  inputZ - Input Z axis.
     //
-    inline Vector(const float inputX, const float inputY, const float inputZ) : x(inputX), y(inputY), z(inputZ) {}
+    inline Vector(float inputX, float inputY, float inputZ) : x(inputX), y(inputY), z(inputZ)
+    {
+    }
 
     //
     // Function: Vector
@@ -362,7 +367,9 @@ public:
     // Parameters:
     //	  other - Float pointer.
     //
-    inline Vector(float* other) : x(other[0]), y(other[1]), z(other[2]) {}
+    inline Vector(float* other) : x(other[0]), y(other[1]), z(other[2])
+    {
+    }
 
     //
     // Function: Vector
@@ -372,8 +379,9 @@ public:
     // Parameters:
     //   right - Other Vector, that should be assigned.
     //
-    inline Vector(const Vector& right) : x(right.x), y(right.y), z(right.z) {}
-
+    inline Vector(const Vector& right) : x(right.x), y(right.y), z(right.z)
+    {
+    }
     //
     // Group: Operators.
     //
@@ -398,12 +406,12 @@ public:
         return (&x)[index];
     }
 
-    inline const Vector operator + (const Vector right) const
+    inline const Vector operator + (const Vector& right) const
     {
         return Vector(x + right.x, y + right.y, z + right.z);
     }
 
-    inline const Vector operator - (const Vector right) const
+    inline const Vector operator - (const Vector& right) const
     {
         return Vector(x - right.x, y - right.y, z - right.z);
     }
@@ -413,71 +421,76 @@ public:
         return Vector(-x, -y, -z);
     }
 
-    friend inline const Vector operator * (const float vec, const Vector right)
+    friend inline const Vector operator * (const float vec, const Vector& right)
     {
         return Vector(right.x * vec, right.y * vec, right.z * vec);
     }
 
-    inline const Vector operator * (const float vec) const
+    inline const Vector operator * (float vec) const
     {
         return Vector(vec * x, vec * y, vec * z);
     }
 
-    inline const Vector operator / (const float vec) const
+    inline const Vector operator / (float vec) const
     {
         const float inv = 1.0f / vec;
         return Vector(inv * x, inv * y, inv * z);
     }
 
-    inline const Vector operator ^ (const Vector right) const
+    inline const Vector operator ^ (const Vector& right) const
     {
         return Vector(y * right.z - z * right.y, z * right.x - x * right.z, x * right.y - y * right.x);
     }
 
-    inline float operator | (const Vector right) const
+    inline float operator | (const Vector& right) const
     {
         return x * right.x + y * right.y + z * right.z;
     }
 
-    inline const Vector& operator += (const Vector right)
+    inline const Vector& operator += (const Vector& right)
     {
         x += right.x;
         y += right.y;
         z += right.z;
+
         return *this;
     }
 
-    inline const Vector& operator -= (const Vector right)
+    inline const Vector& operator -= (const Vector& right)
     {
         x -= right.x;
         y -= right.y;
         z -= right.z;
+
         return *this;
     }
 
-    inline const Vector& operator *= (const float vec)
+    inline const Vector& operator *= (float vec)
     {
         x *= vec;
         y *= vec;
         z *= vec;
+
         return *this;
     }
 
-    inline const Vector& operator /= (const float vec)
+    inline const Vector& operator /= (float vec)
     {
         const float inv = 1.0f / vec;
+
         x *= inv;
         y *= inv;
         z *= inv;
+
         return *this;
     }
 
-    inline bool operator == (const Vector right) const
+    inline bool operator == (const Vector& right) const
     {
         return Math::FltEqual(x, right.x) && Math::FltEqual(y, right.y) && Math::FltEqual(z, right.z);
     }
 
-    inline bool operator != (const Vector right) const
+    inline bool operator != (const Vector& right) const
     {
         return !Math::FltEqual(x, right.x) && !Math::FltEqual(y, right.y) && !Math::FltEqual(z, right.z);
     }
@@ -487,9 +500,9 @@ public:
         x = right.x;
         y = right.y;
         z = right.z;
+
         return *this;
     }
-
     //
     // Group: Functions.
     //
@@ -600,6 +613,23 @@ public:
         return Vector(x * length, y * length, 0.0f);
     }
 
+    inline float NormalizeInPlace()
+    {
+        float flLen = GetLength();
+        if (flLen > 0.0)
+        {
+            x = (1 / flLen * x);
+            y = (1 / flLen * y);
+        }
+        else
+        {
+            x = 1.0;
+            y = 0.0;
+        }
+
+        return flLen;
+    }
+
     //
     // Function: IsNull
     //
@@ -623,7 +653,7 @@ public:
     //
     inline static const Vector& GetNull(void)
     {
-        static const Vector& s_null = Vector(0.0f, 0.0f, 0.0f);
+        static const Vector& s_null = Vector(0.0, 0.0, 0.0f);
         return s_null;
     }
 
@@ -640,6 +670,7 @@ public:
         x = Math::AngleNormalize(x);
         y = Math::AngleNormalize(y);
         z = 0.0f;
+
         return *this;
     }
 
@@ -813,7 +844,12 @@ public:
     //
     void Destroy(void)
     {
-        safedel(m_elements);
+        if (m_elements != nullptr)
+        {
+            delete[] m_elements;
+            m_elements = nullptr;
+        }
+
         m_itemSize = 0;
         m_itemCount = 0;
     }
@@ -838,6 +874,7 @@ public:
         }
 
         int checkSize = 0;
+
         if (m_resizeStep != 0)
             checkSize = m_itemCount + m_resizeStep;
         else
@@ -856,7 +893,10 @@ public:
         if (newSize > checkSize)
             checkSize = newSize;
 
-        T* buffer = safeloc<T>(checkSize);
+        T* buffer = new(std::nothrow) T[checkSize];
+        if (buffer == nullptr)
+            return false;
+
         if (keepData && m_elements != nullptr)
         {
             if (checkSize < m_itemCount)
@@ -871,7 +911,6 @@ public:
 
         m_elements = buffer;
         m_itemSize = checkSize;
-        buffer = nullptr;
         return true;
     }
 
@@ -964,7 +1003,7 @@ public:
     T& GetAt(const int index)
     {
         if (index < 0 || index >= m_itemCount)
-            return m_elements[crandomint(0, m_itemCount - 1)];
+            return m_elements[CRandomInt(0, m_itemCount - 1)];
 
         return m_elements[index];
     }
@@ -1210,7 +1249,10 @@ public:
             return;
         }
 
-        T* buffer = safeloc<T>(m_itemCount);
+        T* buffer = new(std::nothrow) T[m_itemCount];
+        if (buffer == nullptr)
+            return;
+
         if (m_elements != nullptr)
         {
             int i;
@@ -1222,7 +1264,6 @@ public:
 
         m_elements = buffer;
         m_itemSize = m_itemCount;
-        buffer = nullptr;
     }
 
     //
@@ -1298,7 +1339,10 @@ public:
     //
     T& GetRandomElement(void) const
     {
-        return m_elements[crandomint(0, m_itemCount - 1)];
+        if (m_itemCount < 2)
+            return m_elements[0];
+
+        return m_elements[CRandomInt(0, m_itemCount - 1)];
     }
 
     Array <T>& operator = (const Array <T>& other)
@@ -1321,9 +1365,12 @@ template <typename T1, typename T2> struct Pair
 public:
     T1 first;
     T2 second;
+
 public:
     Pair <T1, T2>(void) : first(T1()), second(T2()) {}
+
     Pair(const T1& f, const T2& s) : first(f), second(s) {}
+
     template <typename A1, typename A2> Pair(const Pair <A1, A2>& right) : first(right.first), second(right.second) {}
 };
 
@@ -1356,7 +1403,10 @@ private:
             return;
 
         m_allocatedSize = size + 16;
-        char* tempBuffer = safeloc<char>(size + 1);
+        char* tempBuffer = new(std::nothrow) char[size + 1];
+        if (tempBuffer == nullptr)
+            return;
+
         if (m_bufferPtr != nullptr)
         {
             cstrcpy(tempBuffer, m_bufferPtr);
@@ -1366,7 +1416,6 @@ private:
 
         m_bufferPtr = tempBuffer;
         m_allocatedSize = size;
-        tempBuffer = nullptr;
     }
 
     //
@@ -1461,7 +1510,11 @@ public:
         m_stringLength = 0;
     }
 
-    ~String(void) { safedel(m_bufferPtr); }
+    ~String(void)
+    {
+        if (m_bufferPtr)
+            delete[] m_bufferPtr;
+    }
 
     String(const char* bufferPtr)
     {
@@ -1599,8 +1652,10 @@ public:
     char* GetBufferSetLength(const int length)
     {
         char* buffer = GetBuffer(length);
+
         m_stringLength = length;
         m_bufferPtr[length] = 0;
+
         return buffer;
     }
 
@@ -1658,9 +1713,11 @@ public:
     {
         va_list ap;
         char buffer[1024];
+
         va_start(ap, fmt);
         vsprintf(buffer, fmt, ap);
         va_end(ap);
+
         Append(buffer);
     }
 
@@ -1683,9 +1740,9 @@ public:
     // Parameters:
     //  input - Character to assign.
     //
-    void Assign(const char input)
+    void Assign(char input)
     {
-        const char psz[2] = { input, 0 };
+        char psz[2] = { input, 0 };
         Assign(psz);
     }
 
@@ -1706,6 +1763,7 @@ public:
         }
 
         UpdateBufferSize(cstrlen(bufferPtr));
+
         if (m_bufferPtr != nullptr)
         {
             cstrcpy(m_bufferPtr, bufferPtr);
@@ -1726,9 +1784,11 @@ public:
     {
         va_list ap;
         char buffer[1024];
+
         va_start(ap, fmt);
         vsprintf(buffer, fmt, ap);
         va_end(ap);
+
         Assign(buffer);
     }
 
@@ -1790,11 +1850,6 @@ public:
         return ToInt();
     }
 
-    operator int8_t(void)
-    {
-        return static_cast<int8_t>(ToInt());
-    }
-
     operator long(void)
     {
         return static_cast<long>(ToInt());
@@ -1814,6 +1869,7 @@ public:
     {
         String result(s1);
         result += s2;
+
         return result;
     }
 
@@ -1821,6 +1877,7 @@ public:
     {
         String result(holder);
         result += ch;
+
         return result;
     }
 
@@ -1828,6 +1885,7 @@ public:
     {
         String result(ch);
         result += holder;
+
         return result;
     }
 
@@ -1835,6 +1893,7 @@ public:
     {
         String result(holder);
         result += str;
+
         return result;
     }
 
@@ -1842,6 +1901,7 @@ public:
     {
         String result(const_cast <char*> (str));
         result += holder;
+
         return result;
     }
 
@@ -1936,7 +1996,7 @@ public:
     //
     String Mid(const int startIndex, int count = -1)
     {
-        if (startIndex >= m_stringLength || m_bufferPtr == nullptr)
+        if (startIndex >= m_stringLength || !m_bufferPtr)
             return nullptr;
 
         if (count == -1)
@@ -1945,7 +2005,10 @@ public:
             count = m_stringLength - startIndex;
 
         int i = 0, j = 0;
-        char* holder = safeloc<char>(m_stringLength + 1);
+        char* holder = new(std::nothrow) char[m_stringLength + 1];
+        if (holder == nullptr)
+            return nullptr;
+
         for (i = startIndex; i < startIndex + count; i++)
             holder[j++] = m_bufferPtr[i];
 
@@ -1953,7 +2016,7 @@ public:
         holder[j] = 0;
         result.Assign(holder);
 
-        safedel(holder);
+        delete[] holder;
         return result;
     }
 
@@ -2248,9 +2311,9 @@ public:
         if (!string.m_stringLength)
             return startIndex;
 
-        int j;
         for (; startIndex < m_stringLength; startIndex++)
         {
+            int j;
             for (j = 0; j < string.m_stringLength && startIndex + j < m_stringLength; j++)
             {
                 if (m_bufferPtr[startIndex + j] != string.m_bufferPtr[j])
@@ -2654,7 +2717,7 @@ public:
     // See Also:
     //  <Array>
     //
-    Array <String> Split(char* separator)
+    Array <String> Split(const char* separator)
     {
         Array <String> holder;
         int tokenLength, index = 0;
@@ -2688,7 +2751,7 @@ public:
     //
     Array <String> Split(const char separator)
     {
-        char sep[2] = { separator, 0x0 };
+        const char sep[2] = { separator, 0x0 };
         return Split(sep);
     }
 };
@@ -3235,4 +3298,10 @@ template <typename T1, typename T2> inline Pair <T1, T2> MakePair(T1 first, T2 s
 {
     return Pair <T1, T2>(first, second);
 }
+
+
+// @DEPRECATEME@
+#define ITERATE_ARRAY(arrayName, iteratorName) \
+   for (int iteratorName = 0; iteratorName != arrayName.GetElementNumber (); iteratorName++)
+
 #endif // RUNTIME_INCLUDED

@@ -35,10 +35,13 @@ extern bool g_waypointsChanged;
 extern bool g_autoWaypoint;
 extern bool g_botsCanPause;
 extern bool g_editNoclip;
+extern bool g_isMetamod;
 extern bool g_isFakeCommand;
 extern bool g_leaderChoosen[2];
 extern bool g_analyzewaypoints;
 extern bool g_analyzeputrequirescrouch;
+extern bool g_expanded[Const_MaxWaypoints];
+extern bool g_sendMessage;
 extern bool g_isXash;
 
 extern bool g_sgdWaypoint;
@@ -47,20 +50,24 @@ extern int m_sautoRadius;
 
 extern float g_autoPathDistance;
 extern float g_timeBombPlanted;
+extern float g_timeNextBombUpdate;
 extern float g_lastChatTime;
 extern float g_timeRoundEnd;
 extern float g_timeRoundMid;
+extern float g_timeNextBombUpdate;
 extern float g_timeRoundStart;
 extern float g_lastRadioTime[2];
+extern float g_audioTime;
 extern float g_fakePingUpdate;
 extern float g_pathTimer;
-extern float g_audioTime;
+
 extern float g_DelayTimer;
 
 extern int g_mapType;
 extern int g_numWaypoints;
 extern int g_gameVersion;
 extern int g_fakeArgc;
+extern unsigned short g_killHistory;
 
 extern int g_normalWeaponPrefs[Const_NumWeapons];
 extern int g_rusherWeaponPrefs[Const_NumWeapons];
@@ -74,7 +81,7 @@ extern int g_modelIndexLaser;
 extern int g_modelIndexArrow;
 extern char g_fakeArgv[256];
 
-const int entityNum = 254;
+const int entityNum = 256;
 extern int g_entityId[entityNum];
 extern int g_entityTeam[entityNum];
 extern int g_entityAction[entityNum];
@@ -82,9 +89,9 @@ extern int g_entityWpIndex[entityNum];
 extern Vector g_entityGetWpOrigin[entityNum];
 extern float g_entityGetWpTime[entityNum];
 
-extern MiniArray <Array <String>> g_chatFactory;
-extern MiniArray <NameItem> g_botNames;
-extern MiniArray <KwChat> g_replyFactory;
+extern Array <Array <String> > g_chatFactory;
+extern Array <NameItem> g_botNames;
+extern Array <KwChat> g_replyFactory;
 
 extern FireDelay g_fireDelay[Const_NumWeapons + 1];
 extern WeaponSelect g_weaponSelect[Const_NumWeapons + 1];
@@ -98,6 +105,12 @@ extern TaskItem g_taskFilters[];
 
 extern edict_t* g_hostEntity;
 extern edict_t* g_worldEdict;
+extern Library* g_gameLib;
 
 extern DLL_FUNCTIONS g_functionTable;
+extern EntityAPI_t g_entityAPI;
+extern FuncPointers_t g_funcPointers;
+extern NewEntityAPI_t g_getNewEntityAPI;
+extern BlendAPI_t g_serverBlendingAPI;
+
 #endif // GLOBALS_INCLUDED
