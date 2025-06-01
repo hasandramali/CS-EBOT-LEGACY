@@ -1,25 +1,67 @@
-name: Build For Linux 
+name: Build For Linux and Windows
 
 on: [push]
 
 jobs:
   linux:
-   name: Linux-i386
-   runs-on: ubuntu-latest
-   steps:
-   - name: Checkout sources
-     uses: actions/checkout@v3
-     with:
+    name: Linux-i386
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v4
+        with:
           fetch-depth: 0
           submodules: recursive
-   - run: |
-           sudo apt update
-           sudo apt install build-essential cmake make g++ clang gcc g++-multilib gcc-multilib -y
-           cd project && mkdir build && cd build
-           cmake .. && make -j2
-           
-   - name: Upload artifacts
-     uses: actions/upload-artifact@v3
-     with:
-          name: ebot-legacy-linux
+
+      - name: Install 32-bit dependencies
+        run: |
+          sudo dpkg --add-architecture i386
+          sudo apt update
+          sudo apt install -y \
+            build-essential \
+            clang \
+            cmake \
+            gcc-multilib \
+            g++-multilib \
+            libc6-dev-i386 \
+            libstdc++6:i386
+
+      - name: Build Project
+        run: |
+          cd project
+          mkdir -p build
+          cd build
+          cmake .. -DCMAKE_BUILD_TYPE=Release
+          make -j2
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ebot-linux
           path: project/build/ebot/ebot.so
+
+  windows:
+    name: Windows-x86
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          submodules: recursive
+
+      - name: Configure and Build with CMake (MSVC x86)
+        run: |
+          cd project
+          mkdir build
+          cd build
+          cmake .. -G "Visual Studio 17 2022" -A Win32 -DCMAKE_BUILD_TYPE=Release
+          cmake --build . --config Release
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ebot-windows
+          path: project/build/Release/ebot.dll
