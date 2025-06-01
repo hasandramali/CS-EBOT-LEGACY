@@ -1736,11 +1736,11 @@ bool Waypoint::Load(void)
         else
         {
             g_numWaypoints = header.pointNumber;
-            PathOLD* paths[g_numWaypoints];
+            PathOLD** paths = new PathOLD*[g_numWaypoints];
 
-            for (i = 0; i < g_numWaypoints; i++)
+            for (int i = 0; i < g_numWaypoints; i++)
             {
-                paths[i] = new(std::nothrow) PathOLD;
+                paths[i] = new(std::nothrow) PathOLD2;
                 if (paths[i] == nullptr)
                     continue;
 
@@ -1804,8 +1804,16 @@ bool Waypoint::Load(void)
         return false;
     }
 
-    for (i = 0; i < g_numWaypoints; i++)
+    for (int i = 0; i < g_numWaypoints; i++)
+    {
+        delete paths[i];
+    }
+    delete[] paths;
+
+    for (int i = 0; i < g_numWaypoints; i++)
+    {
         m_waypointDisplayTime[i] = 0.0f;
+    }
 
     InitTypes();
 
