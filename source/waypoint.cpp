@@ -1704,127 +1704,91 @@ bool Waypoint::Load(void)
         }
         else if (header.fileVersion == 125)
         {
-            g_numWaypoints = header.pointNumber;
-            PathOLD2* paths[g_numWaypoints];
+		g_numWaypoints = header.pointNumber;
+		PathOLD** paths = new(std::nothrow) PathOLD*[g_numWaypoints];
+		if (paths == nullptr)
+		    return false;
 
-            for (i = 0; i < g_numWaypoints; i++)
-            {
-                paths[i] = new(std::nothrow) PathOLD2;
-                if (paths[i] == nullptr)
-                    continue;
+		for (int i = 0; i < g_numWaypoints; i++)
+		{
+			paths[i] = new(std::nothrow) PathOLD;
+		 	if (paths[i] == nullptr)
+			        continue;
 
-                fp.Read(paths[i], sizeof(PathOLD2));
+			fp.Read(paths[i], sizeof(PathOLD));
 
-                m_paths[i] = new(std::nothrow) Path;
-                if (m_paths[i] == nullptr)
-                    continue;
+			m_paths[i] = new(std::nothrow) Path;
+			if (m_paths[i] == nullptr)
+			        continue;
 
-                m_paths[i]->origin = paths[i]->origin;
-                m_paths[i]->radius = static_cast<uint8_t>(cclamp(paths[i]->radius, 0, 255));
-                m_paths[i]->flags = static_cast<uint32>(cmax(0, paths[i]->flags));
-                m_paths[i]->mesh = static_cast<uint8_t>(cclamp(paths[i]->mesh, 0, 255));
-                m_paths[i]->gravity = paths[i]->gravity;
+			 m_paths[i]->origin = paths[i]->origin;
+			 m_paths[i]->radius = static_cast<uint8_t>(cclampf(paths[i]->radius, 0.0f, 255.0f));
+			 m_paths[i]->flags = static_cast<uint32_t>(cmax(paths[i]->flags, 0)); // düzeltildi
+			 m_paths[i]->mesh = static_cast<uint8_t>(cclampf(paths[i]->campStartX, 0.0f, 255.0f));
+			 m_paths[i]->gravity = paths[i]->campStartY;
 
-                int C;
-                for (C = 0; C < 8; C++)
-                {
-                    m_paths[i]->index[C] = paths[i]->index[C];
-                    m_paths[i]->connectionFlags[C] = paths[i]->connectionFlags[C];
-                }
-            }
-        }
-        else
-        {
-            g_numWaypoints = header.pointNumber;
-            PathOLD** paths = new PathOLD*[g_numWaypoints];
+			 for (int C = 0; C < 8; C++)
+			 {
+			        m_paths[i]->index[C] = paths[i]->index[C];
+			        m_paths[i]->connectionFlags[C] = paths[i]->connectionFlags[C];
+			 }
+		}
 
-            for (int i = 0; i < g_numWaypoints; i++)
-            {
-                paths[i] = new(std::nothrow) PathOLD2;
-                if (paths[i] == nullptr)
-                    continue;
+	Save();
 
-                fp.Read(paths[i], sizeof(PathOLD));
+	m_waypointPaths = true;
 
-                m_paths[i] = new(std::nothrow) Path;
-                if (m_paths[i] == nullptr)
-                    continue;
+	if (cstrncmp(header.author, "EfeDursun125", 12) == 0)
+	sprintf(m_infoBuffer, "Using Official Waypoint File By: %s", header.author);
+	else
+	sprintf(m_infoBuffer, "Using Waypoint File By: %s", header.author);
+	fp.Close();
+	}
+	else if (ebot_download_waypoints.GetBool() && g_numTry < 5)
+	{
+    		g_numTry++;
+    		Download();
+    		if (Load())
+        	sprintf(m_infoBuffer, "%s.ewp is downloaded from the internet", GetMapName());
+	}
+	else
+	{
+    		if (ebot_analyze_auto_start.GetBool())
+    		{
+        		g_waypoint->CreateBasic();
 
-                m_paths[i]->origin = paths[i]->origin;
-                m_paths[i]->radius = static_cast<uint8_t>(cclampf(paths[i]->radius, 0.0f, 255.0f));
-                m_paths[i]->flags = static_cast<uint32>(cmax(0, paths[i]->flags));
-                m_paths[i]->mesh = static_cast<uint8_t>(cclampf(paths[i]->campStartX, 0.0f, 255.0f));
-                m_paths[i]->gravity = paths[i]->campStartY;
+        		for (int i = 0; i < (Const_MaxWaypoints - 1); i++)
+            		g_expanded[i] = false;
 
-                int C;
-                for (C = 0; C < 8; C++)
-                {
-                    m_paths[i]->index[C] = paths[i]->index[C];
-                    m_paths[i]->connectionFlags[C] = paths[i]->connectionFlags[C];
-                }
-            }
+       			g_analyzewaypoints = true;
+    		}
+    	else
+    	{
+        sprintf(m_infoBuffer, "%s.ewp does not exist, pleasue use 'ebot wp analyze' for create waypoints! (dont forget using 'ebot wp analyzeoff' when finished)", GetMapName());
+        AddLogEntry(LOG_ERROR, m_infoBuffer);
+    	}
 
-            Save();
-        }
+   	 return false;
+	}
 
-        m_waypointPaths = true;
+	// Clean up memory
+	for (int i = 0; i < g_numWaypoints; i++)
+    	delete paths[i];
+	delete[] paths;
 
-        if (cstrncmp(header.author, "EfeDursun125", 12) == 0)
-            sprintf(m_infoBuffer, "Using Official Waypoint File By: %s", header.author);
-        else
-            sprintf(m_infoBuffer, "Using Waypoint File By: %s", header.author);
+	for (int i = 0; i < g_numWaypoints; i++)
+    	m_waypointDisplayTime[i] = 0.0f;
 
-        fp.Close();
-    }
-    else if (ebot_download_waypoints.GetBool() && g_numTry < 5)
-    {
-        g_numTry++;
-        Download();
-        if (Load())
-            sprintf(m_infoBuffer, "%s.ewp is downloaded from the internet", GetMapName());
-    }
-    else
-    {
-        if (ebot_analyze_auto_start.GetBool())
-        {
-            g_waypoint->CreateBasic();
+	InitTypes();
 
-            // no expand
-            for (i = 0; i < (Const_MaxWaypoints - 1); i++)
-                g_expanded[i] = false;
+	g_waypointsChanged = false;
 
-            g_analyzewaypoints = true;
-        }
-        else
-        {
-            sprintf(m_infoBuffer, "%s.ewp does not exist, pleasue use 'ebot wp analyze' for create waypoints! (dont forget using 'ebot wp analyzeoff' when finished)", GetMapName());
-            AddLogEntry(LOG_ERROR, m_infoBuffer);
-        }
+	m_pathDisplayTime = 0.0f;
+	m_arrowDisplayTime = 0.0f;
 
-        return false;
-    }
+	g_botManager->InitQuota();
 
-    for (int i = 0; i < g_numWaypoints; i++)
-    {
-        delete paths[i];
-    }
-    delete[] paths;
-
-    for (int i = 0; i < g_numWaypoints; i++)
-    {
-        m_waypointDisplayTime[i] = 0.0f;
-    }
-
-    InitTypes();
-
-    g_waypointsChanged = false;
-
-    m_pathDisplayTime = 0.0f;
-    m_arrowDisplayTime = 0.0f;
-
-    g_botManager->InitQuota();
-
-    return true;
+	return true;
 }
 
 void Waypoint::Save(void)
