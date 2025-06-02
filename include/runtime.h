@@ -1284,7 +1284,7 @@ public:
     // Function: PopNoReturn
     //  Pops element from array.
     //
-    T PopNoReturn(void)
+    void PopNoReturn(void)
     {
         RemoveAt(m_itemCount - 1);
     }
