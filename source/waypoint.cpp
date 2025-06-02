@@ -1658,6 +1658,7 @@ bool Waypoint::Download(void)
 static int g_numTry;
 bool Waypoint::Load(void)
 {
+    static int g_numTry;
     int i;
     const char* waypointFilePath = CheckSubfolderFile();
     File fp(waypointFilePath, "rb");
@@ -1677,118 +1678,134 @@ bool Waypoint::Load(void)
         else if (header.fileVersion == FV_WAYPOINT)
         {
             g_numWaypoints = header.pointNumber;
-            Path paths[g_numWaypoints];
+
+            Path* paths = new Path[g_numWaypoints];
             const int result = Compressor::Uncompress(CheckSubfolderFile(), sizeof(WaypointHeader), (uint8_t*)paths, g_numWaypoints * sizeof(Path));
             if (result != -1)
             {
                 for (i = 0; i < g_numWaypoints; i++)
                 {
                     m_paths[i] = new(std::nothrow) Path;
-                    if (m_paths[i] == nullptr)
-                        continue;
+                    if (!m_paths[i]) continue;
 
-                    m_paths[i]->origin = paths[i].origin;
-                    m_paths[i]->radius = paths[i].radius;
-                    m_paths[i]->flags = paths[i].flags;
-                    m_paths[i]->mesh = paths[i].mesh;
-                    m_paths[i]->gravity = paths[i].gravity;
-
-                    int C;
-                    for (C = 0; C < 8; C++)
-                    {
-                        m_paths[i]->index[C] = paths[i].index[C];
-                        m_paths[i]->connectionFlags[C] = paths[i].connectionFlags[C];
-                    }
+                    *m_paths[i] = paths[i]; // tüm alanları kopyala
                 }
             }
+            delete[] paths;
         }
         else if (header.fileVersion == 125)
         {
-		g_numWaypoints = header.pointNumber;
-		PathOLD** paths = new(std::nothrow) PathOLD*[g_numWaypoints];
-		if (paths == nullptr)
-		    return false;
+            g_numWaypoints = header.pointNumber;
+            PathOLD2** paths = new PathOLD2*[g_numWaypoints];
 
-		for (int i = 0; i < g_numWaypoints; i++)
-		{
-			paths[i] = new(std::nothrow) PathOLD;
-		 	if (paths[i] == nullptr)
-			        continue;
+            for (i = 0; i < g_numWaypoints; i++)
+            {
+                paths[i] = new(std::nothrow) PathOLD2;
+                if (!paths[i]) continue;
 
-			fp.Read(paths[i], sizeof(PathOLD));
+                fp.Read(paths[i], sizeof(PathOLD2));
 
-			m_paths[i] = new(std::nothrow) Path;
-			if (m_paths[i] == nullptr)
-			        continue;
+                m_paths[i] = new(std::nothrow) Path;
+                if (!m_paths[i]) continue;
 
-			 m_paths[i]->origin = paths[i]->origin;
-			 m_paths[i]->radius = static_cast<uint8_t>(cclampf(paths[i]->radius, 0.0f, 255.0f));
-			 m_paths[i]->flags = static_cast<uint32_t>(cmax(paths[i]->flags, 0)); // düzeltildi
-			 m_paths[i]->mesh = static_cast<uint8_t>(cclampf(paths[i]->campStartX, 0.0f, 255.0f));
-			 m_paths[i]->gravity = paths[i]->campStartY;
+                m_paths[i]->origin = paths[i]->origin;
+                m_paths[i]->radius = static_cast<uint8_t>(cclamp(paths[i]->radius, 0, 255));
+                m_paths[i]->flags = static_cast<uint32>(cmax(0, paths[i]->flags, INT_MAX));
+                m_paths[i]->mesh = static_cast<uint8_t>(cclamp(paths[i]->mesh, 0, 255));
+                m_paths[i]->gravity = paths[i]->gravity;
 
-			 for (int C = 0; C < 8; C++)
-			 {
-			        m_paths[i]->index[C] = paths[i]->index[C];
-			        m_paths[i]->connectionFlags[C] = paths[i]->connectionFlags[C];
-			 }
-		}
+                for (int C = 0; C < 8; C++)
+                {
+                    m_paths[i]->index[C] = paths[i]->index[C];
+                    m_paths[i]->connectionFlags[C] = paths[i]->connectionFlags[C];
+                }
 
-	Save();
+                delete paths[i];
+            }
 
-	m_waypointPaths = true;
+            delete[] paths;
+        }
+        else
+        {
+            g_numWaypoints = header.pointNumber;
+            PathOLD** paths = new PathOLD*[g_numWaypoints];
 
-	if (cstrncmp(header.author, "EfeDursun125", 12) == 0)
-	sprintf(m_infoBuffer, "Using Official Waypoint File By: %s", header.author);
-	else
-	sprintf(m_infoBuffer, "Using Waypoint File By: %s", header.author);
-	fp.Close();
-	}
-	else if (ebot_download_waypoints.GetBool() && g_numTry < 5)
-	{
-    		g_numTry++;
-    		Download();
-    		if (Load())
-        	sprintf(m_infoBuffer, "%s.ewp is downloaded from the internet", GetMapName());
-	}
-	else
-	{
-    		if (ebot_analyze_auto_start.GetBool())
-    		{
-        		g_waypoint->CreateBasic();
+            for (i = 0; i < g_numWaypoints; i++)
+            {
+                paths[i] = new(std::nothrow) PathOLD;
+                if (!paths[i]) continue;
 
-        		for (int i = 0; i < (Const_MaxWaypoints - 1); i++)
-            		g_expanded[i] = false;
+                fp.Read(paths[i], sizeof(PathOLD));
 
-       			g_analyzewaypoints = true;
-    		}
-    	else
-    	{
-        sprintf(m_infoBuffer, "%s.ewp does not exist, pleasue use 'ebot wp analyze' for create waypoints! (dont forget using 'ebot wp analyzeoff' when finished)", GetMapName());
-        AddLogEntry(LOG_ERROR, m_infoBuffer);
-    	}
+                m_paths[i] = new(std::nothrow) Path;
+                if (!m_paths[i]) continue;
 
-   	 return false;
-	}
+                m_paths[i]->origin = paths[i]->origin;
+                m_paths[i]->radius = static_cast<uint8_t>(cclampf(paths[i]->radius, 0.0f, 255.0f));
+                m_paths[i]->flags = static_cast<uint32>(cmax(0, paths[i]->flags, INT_MAX));
+                m_paths[i]->mesh = static_cast<uint8_t>(cclampf(paths[i]->campStartX, 0.0f, 255.0f));
+                m_paths[i]->gravity = paths[i]->campStartY;
 
-	// Clean up memory
-	for (int i = 0; i < g_numWaypoints; i++)
-    	delete paths[i];
-	delete[] paths;
+                for (int C = 0; C < 8; C++)
+                {
+                    m_paths[i]->index[C] = paths[i]->index[C];
+                    m_paths[i]->connectionFlags[C] = paths[i]->connectionFlags[C];
+                }
 
-	for (int i = 0; i < g_numWaypoints; i++)
-    	m_waypointDisplayTime[i] = 0.0f;
+                delete paths[i];
+            }
 
-	InitTypes();
+            delete[] paths;
+            Save();
+        }
 
-	g_waypointsChanged = false;
+        m_waypointPaths = true;
 
-	m_pathDisplayTime = 0.0f;
-	m_arrowDisplayTime = 0.0f;
+        if (cstrncmp(header.author, "EfeDursun125", 12) == 0)
+            sprintf(m_infoBuffer, "Using Official Waypoint File By: %s", header.author);
+        else
+            sprintf(m_infoBuffer, "Using Waypoint File By: %s", header.author);
 
-	g_botManager->InitQuota();
+        fp.Close();
+    }
+    else if (ebot_download_waypoints.GetBool() && g_numTry < 5)
+    {
+        g_numTry++;
+        Download();
+        if (Load())
+            sprintf(m_infoBuffer, "%s.ewp is downloaded from the internet", GetMapName());
+    }
+    else
+    {
+        if (ebot_analyze_auto_start.GetBool())
+        {
+            g_waypoint->CreateBasic();
+            for (i = 0; i < (Const_MaxWaypoints - 1); i++)
+                g_expanded[i] = false;
+            g_analyzewaypoints = true;
+        }
+        else
+        {
+            sprintf(m_infoBuffer, "%s.ewp does not exist, pleasue use 'ebot wp analyze' for create waypoints! (dont forget using 'ebot wp analyzeoff' when finished)", GetMapName());
+            AddLogEntry(LOG_ERROR, m_infoBuffer);
+        }
 
-	return true;
+        return false;
+    }
+
+    for (i = 0; i < g_numWaypoints; i++)
+        m_waypointDisplayTime[i] = 0.0f;
+
+    InitTypes();
+
+    g_waypointsChanged = false;
+
+    m_pathDisplayTime = 0.0f;
+    m_arrowDisplayTime = 0.0f;
+
+    g_botManager->InitQuota();
+
+    return true;
 }
 
 void Waypoint::Save(void)
@@ -1806,7 +1823,7 @@ void Waypoint::Save(void)
 
     cstrcpy(header.author, waypointAuthor);
 
-    // remember the original waypoint author
+    // Remember original waypoint author if file exists
     const char* waypointFilePath = CheckSubfolderFile();
     File rf(waypointFilePath, "rb");
     if (rf.IsValid())
@@ -1817,57 +1834,54 @@ void Waypoint::Save(void)
 
     cstrcpy(header.header, FH_WAYPOINT_NEW);
     cstrncpy(header.mapName, GetMapName(), 31);
-
     header.mapName[31] = 0;
     header.fileVersion = static_cast<int32_t>(FV_WAYPOINT);
     header.pointNumber = static_cast<int32_t>(g_numWaypoints);
 
     File fp(waypointFilePath, "wb");
-
-    // file was opened
-    if (fp.IsValid())
+    if (!fp.IsValid())
     {
-        // write the waypoint header to the file...
-        fp.Write(&header, sizeof(header));
+        AddLogEntry(LOG_ERROR, "Error writing '%s' waypoint file", GetMapName());
+        return;
+    }
 
-        int i;
-        Path paths[g_numWaypoints];
-        for (i = 0; i < g_numWaypoints; i++)
+    // Write header
+    fp.Write(&header, sizeof(header));
+
+    Path* paths = new Path[g_numWaypoints];
+    for (int i = 0; i < g_numWaypoints; i++)
+    {
+        if (!m_paths[i]) continue;
+
+        paths[i].origin = m_paths[i]->origin;
+        paths[i].radius = m_paths[i]->radius;
+        paths[i].flags = m_paths[i]->flags;
+        paths[i].mesh = m_paths[i]->mesh;
+        paths[i].gravity = m_paths[i]->gravity;
+
+        for (int C = 0; C < 8; C++)
         {
-            if (m_paths[i] == nullptr)
-                continue;
-
-            paths[i].origin = m_paths[i]->origin;
-            paths[i].radius = m_paths[i]->radius;
-            paths[i].flags = m_paths[i]->flags;
-            paths[i].mesh = m_paths[i]->mesh;
-            paths[i].gravity = m_paths[i]->gravity;
-
-            int C;
-            for (C = 0; C < 8; C++)
-            {
-                paths[i].index[C] = m_paths[i]->index[C];
-                paths[i].connectionFlags[C] = m_paths[i]->connectionFlags[C];
-            }
+            paths[i].index[C] = m_paths[i]->index[C];
+            paths[i].connectionFlags[C] = m_paths[i]->connectionFlags[C];
         }
+    }
 
-        i = Compressor::Compress(waypointFilePath, (uint8_t*)&header, sizeof(WaypointHeader), (uint8_t*)paths, g_numWaypoints * sizeof(Path));
-        if (i == 1)
-        {
-            ServerPrint("Error: Cannot Save Waypoints");
-            CenterPrint("Error: Cannot save waypoints!");
-            AddLogEntry(LOG_ERROR, "Error writing '%s' waypoint file", GetMapName());
-        }
-        else
-        {
-            ServerPrint("Waypoints Saved");
-            CenterPrint("Waypoints are saved!");
-        }
+    const int result = Compressor::Compress(waypointFilePath, (uint8_t*)&header, sizeof(WaypointHeader), (uint8_t*)paths, g_numWaypoints * sizeof(Path));
+    delete[] paths;
 
-        fp.Close();
+    if (result == 1)
+    {
+        ServerPrint("Error: Cannot Save Waypoints");
+        CenterPrint("Error: Cannot save waypoints!");
+        AddLogEntry(LOG_ERROR, "Error writing '%s' waypoint file", GetMapName());
     }
     else
-        AddLogEntry(LOG_ERROR, "Error writing '%s' waypoint file", GetMapName());
+    {
+        ServerPrint("Waypoints Saved");
+        CenterPrint("Waypoints are saved!");
+    }
+
+    fp.Close();
 }
 
 const char* Waypoint::CheckSubfolderFile(void)
@@ -1878,16 +1892,14 @@ const char* Waypoint::CheckSubfolderFile(void)
     const char* mapName = GetMapName();
 
     sprintf(waypointFilePath, "%s%s.ewp", waypointDir, mapName);
-
     if (TryFileOpen(waypointFilePath))
         return waypointFilePath;
-    else
-    {
-        sprintf(waypointFilePath, "%s%s.pwf", waypointDir, mapName);
-        if (TryFileOpen(waypointFilePath))
-            return waypointFilePath;
-    }
 
+    sprintf(waypointFilePath, "%s%s.pwf", waypointDir, mapName);
+    if (TryFileOpen(waypointFilePath))
+        return waypointFilePath;
+
+    // fallback to .ewp if none exist
     sprintf(waypointFilePath, "%s%s.ewp", waypointDir, mapName);
     return waypointFilePath;
 }
