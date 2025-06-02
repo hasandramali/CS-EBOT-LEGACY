@@ -1710,7 +1710,7 @@ bool Waypoint::Load(void)
 
                 m_paths[i]->origin = paths[i]->origin;
                 m_paths[i]->radius = static_cast<uint8_t>(cclamp(paths[i]->radius, 0, 255));
-                m_paths[i]->flags = static_cast<uint32>(cmax(0, paths[i]->flags, INT_MAX));
+                m_paths[i]->flags = static_cast<uint32>(cclamp(paths[i]->flags, 0, INT_MAX));
                 m_paths[i]->mesh = static_cast<uint8_t>(cclamp(paths[i]->mesh, 0, 255));
                 m_paths[i]->gravity = paths[i]->gravity;
 
@@ -1742,7 +1742,7 @@ bool Waypoint::Load(void)
 
                 m_paths[i]->origin = paths[i]->origin;
                 m_paths[i]->radius = static_cast<uint8_t>(cclampf(paths[i]->radius, 0.0f, 255.0f));
-                m_paths[i]->flags = static_cast<uint32>(cmax(0, paths[i]->flags, INT_MAX));
+                m_paths[i]->flags = static_cast<uint32>(cclamp(paths[i]->flags, 0, INT_MAX));
                 m_paths[i]->mesh = static_cast<uint8_t>(cclampf(paths[i]->campStartX, 0.0f, 255.0f));
                 m_paths[i]->gravity = paths[i]->campStartY;
 
