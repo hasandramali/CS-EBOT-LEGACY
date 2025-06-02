@@ -3982,9 +3982,9 @@ void Bot::TaskNormal(int i, int destIndex, Vector src)
 // this is core function that handle task execution
 void Bot::RunTask(void)
 {
-	int destIndex, i;
-	Vector src, destination;
-	TraceResult tr{};
+        int destIndex = 0, i = 0;
+        Vector src, destination;
+        TraceResult tr{};
 
 	bool exceptionCaught = false;
 	const float timeToBlowUp = GetBombTimeleft();
