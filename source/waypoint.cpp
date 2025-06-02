@@ -146,7 +146,7 @@ void CreateWaypoint(Vector Next, float range)
 
     if (g_waypoint->IsNodeReachable(targetOrigin, TargetPosition))
     {
-        g_waypoint->Add(isBreakable ? 1 : -1, TargetPosition);  // düzeltme burada
+        g_waypoint->Add(isBreakable ? 1 : -1, TargetPosition);
     }
 }
 
@@ -1980,7 +1980,7 @@ bool Waypoint::IsNodeReachable(const Vector src, const Vector destination)
     {
         if (goBehind)
         {
-            TraceLine(tr.vecEndPos, destination, true, true, tr.pHit, &tr);
+            TraceLine(tr.vecEndPos, destination, static_cast<bool>(true), static_cast<bool>(true), tr.pHit, &tr);
             if (tr.flFraction < 1.0f)
                 return false;
         }
@@ -1994,7 +1994,7 @@ bool Waypoint::IsNodeReachable(const Vector src, const Vector destination)
             Vector to = destination;
             to.z -= 50.0f;
 
-            TraceLine(from, to, true, true, g_hostEntity, &tr);
+            TraceLine(from, to, static_cast<bool>(true), static_cast<bool>(true), g_hostEntity, &tr);
             if (tr.flFraction >= 1.0f)
                 return false;
         }
@@ -2006,7 +2006,7 @@ bool Waypoint::IsNodeReachable(const Vector src, const Vector destination)
         {
             Vector down = check;
             down.z -= 1000.0f;
-            TraceLine(check, down, true, true, g_hostEntity, &tr);
+            TraceLine(check, down, static_cast<bool>(true), static_cast<bool>(true), g_hostEntity, &tr);
             lastHeight = tr.flFraction * 1000.0f;
         }
 
@@ -2017,7 +2017,7 @@ bool Waypoint::IsNodeReachable(const Vector src, const Vector destination)
             Vector down = check;
             down.z -= 1000.0f;
 
-            TraceLine(check, down, true, true, g_hostEntity, &tr);
+            TraceLine(check, down, static_cast<bool>(true), static_cast<bool>(true), g_hostEntity, &tr);
             float currentHeight = tr.flFraction * 1000.0f;
 
             if (currentHeight < lastHeight - 18.0f)
