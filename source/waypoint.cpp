@@ -115,7 +115,7 @@ void CreateWaypoint(Vector Next, float range)
 {
     Next.z += 19.0f;
     TraceResult tr{};
-    TraceHull(Next, Next, NO_BOTH, HULL_HEAD, g_hostEntity, &tr);
+    TraceHull(Next, Next, static_cast<int>(NO_BOTH), HULL_HEAD, g_hostEntity, &tr);
     Next.z -= 19.0f;
     range *= 0.75f;
 
@@ -127,7 +127,8 @@ void CreateWaypoint(Vector Next, float range)
         return;
 
     TraceResult tr2{};
-    TraceHull(tr.vecEndPos, Vector(tr.vecEndPos.x, tr.vecEndPos.y, tr.vecEndPos.z - 32.0f), NO_BOTH, HULL_HEAD, g_hostEntity, &tr2);
+    TraceHull(tr.vecEndPos, Vector(tr.vecEndPos.x, tr.vecEndPos.y, tr.vecEndPos.z - 32.0f),
+        static_cast<int>(NO_BOTH), HULL_HEAD, g_hostEntity, &tr2);
 
     if (tr2.flFraction == 1.0f)
         return;
@@ -140,13 +141,12 @@ void CreateWaypoint(Vector Next, float range)
     if (IsValidWaypoint(endIndex))
         return;
 
-    const Vector targetOrigin = g_waypoint->GetPath(g_waypoint->m_tempPaths.GetData()[g_waypoint->m_tempPaths.Size() - 1])->origin;
-
+    Vector targetOrigin = tr.vecEndPos;  // tr.vecEndPos doğrudan kullanılabilir
     g_analyzeputrequirescrouch = CheckCrouchRequirement(TargetPosition);
 
     if (g_waypoint->IsNodeReachable(targetOrigin, TargetPosition))
     {
-        g_waypoint->Add(isBreakable ? 1 : -1, g_analyzeputrequirescrouch, TargetPosition);
+        g_waypoint->Add(TargetPosition);  // sadece pozisyon parametresi alan overload kullanılmalı
     }
 }
 
@@ -1967,13 +1967,11 @@ bool Waypoint::IsNodeReachable(const Vector src, const Vector destination)
         return false;
 
     TraceResult tr{};
+    TraceHull(src, destination, static_cast<int>(NO_BOTH), HULL_HEAD, g_hostEntity, &tr);
 
-    // 1. Check func_illusionary blocking path
-    TraceHull(src, destination, NO_BOTH, HULL_HEAD, g_hostEntity, &tr);
     if (!FNullEnt(tr.pHit) && cstrcmp("func_illusionary", STRING(tr.pHit->v.classname)) == 0)
         return false;
 
-    // 2. Check line-of-sight
     TraceLine(src, destination, true, false, g_hostEntity, &tr);
 
     bool goBehind = false;
@@ -1987,11 +1985,9 @@ bool Waypoint::IsNodeReachable(const Vector src, const Vector destination)
                 return false;
         }
 
-        // 3. Water check (both points must be in water to be reachable)
         if (POINT_CONTENTS(src) == CONTENTS_WATER && POINT_CONTENTS(destination) == CONTENTS_WATER)
             return true;
 
-        // 4. Height check
         if (destination.z > src.z + 44.0f)
         {
             Vector from = destination;
@@ -2000,10 +1996,9 @@ bool Waypoint::IsNodeReachable(const Vector src, const Vector destination)
 
             TraceLine(from, to, true, true, g_hostEntity, &tr);
             if (tr.flFraction >= 1.0f)
-                return false; // in mid-air
+                return false;
         }
 
-        // 5. Ground clearance check (step-by-step)
         const Vector dir = (destination - src).Normalize();
         Vector check = src;
         float lastHeight = 0.0f;
@@ -2026,7 +2021,7 @@ bool Waypoint::IsNodeReachable(const Vector src, const Vector destination)
             float currentHeight = tr.flFraction * 1000.0f;
 
             if (currentHeight < lastHeight - 18.0f)
-                return false; // drop is too big
+                return false;
 
             lastHeight = currentHeight;
             remaining = (destination - check).GetLengthSquared();
