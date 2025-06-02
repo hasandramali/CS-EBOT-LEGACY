@@ -141,12 +141,12 @@ void CreateWaypoint(Vector Next, float range)
     if (IsValidWaypoint(endIndex))
         return;
 
-    Vector targetOrigin = tr.vecEndPos;  // tr.vecEndPos doğrudan kullanılabilir
+    const Vector targetOrigin = tr.vecEndPos;
     g_analyzeputrequirescrouch = CheckCrouchRequirement(TargetPosition);
 
     if (g_waypoint->IsNodeReachable(targetOrigin, TargetPosition))
     {
-        g_waypoint->Add(TargetPosition);  // sadece pozisyon parametresi alan overload kullanılmalı
+        g_waypoint->Add(isBreakable ? 1 : -1, TargetPosition);  // düzeltme burada
     }
 }
 
@@ -1972,7 +1972,7 @@ bool Waypoint::IsNodeReachable(const Vector src, const Vector destination)
     if (!FNullEnt(tr.pHit) && cstrcmp("func_illusionary", STRING(tr.pHit->v.classname)) == 0)
         return false;
 
-    TraceLine(src, destination, true, false, g_hostEntity, &tr);
+    TraceLine(src, destination, static_cast<bool>(true), static_cast<bool>(false), g_hostEntity, &tr);
 
     bool goBehind = false;
     if (tr.flFraction >= 1.0f || (goBehind = IsBreakable(tr.pHit)) ||
@@ -2053,7 +2053,7 @@ bool Waypoint::IsNodeReachableWithJump(const Vector src, const Vector destinatio
         return false; // don't add pathnodes through func_illusionaries
 
     // check if this waypoint is "visible"...
-    TraceLine(src, destination, true, false, g_hostEntity, &tr);
+    TraceLine(src, destination, static_cast<bool>(true), static_cast<bool>(false), g_hostEntity, &tr);
 
     // if waypoint is visible from current position (even behind head)...
     bool goBehind = false;
