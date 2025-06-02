@@ -1980,7 +1980,7 @@ bool Waypoint::IsNodeReachable(const Vector src, const Vector destination)
     {
         if (goBehind)
         {
-            TraceLine(tr.vecEndPos, destination, static_cast<bool>(true), static_cast<bool>(true), tr.pHit, &tr);
+            TraceLine(tr.vecEndPos, destination, true, true, tr.pHit, &tr);
             if (tr.flFraction < 1.0f)
                 return false;
         }
@@ -1994,7 +1994,7 @@ bool Waypoint::IsNodeReachable(const Vector src, const Vector destination)
             Vector to = destination;
             to.z -= 50.0f;
 
-            TraceLine(from, to, static_cast<bool>(true), static_cast<bool>(true), g_hostEntity, &tr);
+            TraceLine(from, to, true, true, g_hostEntity, &tr);
             if (tr.flFraction >= 1.0f)
                 return false;
         }
