@@ -117,33 +117,37 @@ void CreateWaypoint(Vector Next, float range)
     TraceResult tr{};
     TraceHull(Next, Next, NO_BOTH, HULL_HEAD, g_hostEntity, &tr);
     Next.z -= 19.0f;
-
     range *= 0.75f;
+
     if (tr.flFraction != 1.0f && !IsBreakable(tr.pHit))
         return;
 
-    const int startindex = g_waypoint->FindNearestInCircle(tr.vecEndPos, range);
-    if (IsValidWaypoint(startindex))
+    const int startIndex = g_waypoint->FindNearestInCircle(tr.vecEndPos, range);
+    if (IsValidWaypoint(startIndex))
         return;
 
     TraceResult tr2{};
-    TraceHull(tr.vecEndPos, Vector(tr.vecEndPos.x, tr.vecEndPos.y, (tr.vecEndPos.z - 800.0f)), NO_BOTH, HULL_HEAD, g_hostEntity, &tr2);
+    TraceHull(tr.vecEndPos, Vector(tr.vecEndPos.x, tr.vecEndPos.y, tr.vecEndPos.z - 32.0f), NO_BOTH, HULL_HEAD, g_hostEntity, &tr2);
 
     if (tr2.flFraction == 1.0f)
         return;
 
     const bool isBreakable = IsBreakable(tr.pHit);
     Vector TargetPosition = tr2.vecEndPos;
-    TargetPosition.z = TargetPosition.z + 19.0f;
+    TargetPosition.z += 19.0f;
 
-    const int endindex = g_waypoint->FindNearestInCircle(TargetPosition, range);
-    if (IsValidWaypoint(endindex))
+    const int endIndex = g_waypoint->FindNearestInCircle(TargetPosition, range);
+    if (IsValidWaypoint(endIndex))
         return;
 
-    const Vector targetOrigin = g_waypoint->GetPath(g_waypoint->FindNearestInCircle(TargetPosition, 256.0f))->origin;
+    const Vector targetOrigin = g_waypoint->GetPath(g_waypoint->m_tempPaths.GetData()[g_waypoint->m_tempPaths.Size() - 1])->origin;
+
     g_analyzeputrequirescrouch = CheckCrouchRequirement(TargetPosition);
+
     if (g_waypoint->IsNodeReachable(targetOrigin, TargetPosition))
-        g_waypoint->Add(isBreakable ? 1 : -1, g_analyzeputrequirescrouch ? Vector(TargetPosition.x, TargetPosition.y, (TargetPosition.z - 18.0f)) : TargetPosition);
+    {
+        g_waypoint->Add(isBreakable ? 1 : -1, g_analyzeputrequirescrouch, TargetPosition);
+    }
 }
 
 void AnalyzeThread(void)
@@ -1958,83 +1962,74 @@ bool Waypoint::Reachable(edict_t* entity, const int index)
 
 bool Waypoint::IsNodeReachable(const Vector src, const Vector destination)
 {
-    float distance = (destination - src).GetLengthSquared();
-
-    // is the destination not close enough?
+    const float distance = (destination - src).GetLengthSquared();
     if (distance > SquaredF(g_autoPathDistance))
         return false;
 
     TraceResult tr{};
 
-    // check if we go through a func_illusionary, in which case return false
+    // 1. Check func_illusionary blocking path
     TraceHull(src, destination, NO_BOTH, HULL_HEAD, g_hostEntity, &tr);
-
     if (!FNullEnt(tr.pHit) && cstrcmp("func_illusionary", STRING(tr.pHit->v.classname)) == 0)
-        return false; // don't add pathnodes through func_illusionaries
+        return false;
 
-    // check if this waypoint is "visible"...
+    // 2. Check line-of-sight
     TraceLine(src, destination, true, false, g_hostEntity, &tr);
 
-    // if waypoint is visible from current position (even behind head)...
     bool goBehind = false;
-    if (tr.flFraction >= 1.0f || (goBehind = IsBreakable(tr.pHit)) || (goBehind = (!FNullEnt(tr.pHit) && cstrncmp("func_door", STRING(tr.pHit->v.classname), 9) == 0)))
+    if (tr.flFraction >= 1.0f || (goBehind = IsBreakable(tr.pHit)) ||
+        (goBehind = (!FNullEnt(tr.pHit) && cstrncmp("func_door", STRING(tr.pHit->v.classname), 9) == 0)))
     {
-        // if it's a door check if nothing blocks behind
-        if (goBehind == true)
+        if (goBehind)
         {
             TraceLine(tr.vecEndPos, destination, true, true, tr.pHit, &tr);
-
             if (tr.flFraction < 1.0f)
                 return false;
         }
 
-        // check for special case of both nodes being in water...
+        // 3. Water check (both points must be in water to be reachable)
         if (POINT_CONTENTS(src) == CONTENTS_WATER && POINT_CONTENTS(destination) == CONTENTS_WATER)
-            return true; // then they're reachable each other
+            return true;
 
-        // is dest node higher than src? (45 is max jump height)
+        // 4. Height check
         if (destination.z > src.z + 44.0f)
         {
-            Vector sourceNew = destination;
-            Vector destinationNew = destination;
-            destinationNew.z = destinationNew.z - 50.0f; // straight down 50 units
+            Vector from = destination;
+            Vector to = destination;
+            to.z -= 50.0f;
 
-            TraceLine(sourceNew, destinationNew, true, true, g_hostEntity, &tr);
-
-            // check if we didn't hit anything, if not then it's in mid-air
-            if (tr.flFraction >= 1.0)
-                return false; // can't reach this one
+            TraceLine(from, to, true, true, g_hostEntity, &tr);
+            if (tr.flFraction >= 1.0f)
+                return false; // in mid-air
         }
 
-        // check if distance to ground drops more than step height at points between source and destination...
-        Vector direction = (destination - src).Normalize(); // 1 unit long
-        Vector check = src, down = src;
+        // 5. Ground clearance check (step-by-step)
+        const Vector dir = (destination - src).Normalize();
+        Vector check = src;
+        float lastHeight = 0.0f;
 
-        down.z = down.z - 1000.0f; // straight down 1000 units
-
-        TraceLine(check, down, true, true, g_hostEntity, &tr);
-
-        float lastHeight = tr.flFraction * 1000.0f; // height from ground
-        distance = (destination - check).GetLengthSquared(); // distance from goal
-
-        while (distance > SquaredF(10.0f))
         {
-            // move 10 units closer to the goal...
-            check = check + (direction * 10.0f);
+            Vector down = check;
+            down.z -= 1000.0f;
+            TraceLine(check, down, true, true, g_hostEntity, &tr);
+            lastHeight = tr.flFraction * 1000.0f;
+        }
 
-            down = check;
-            down.z = down.z - 1000.0f; // straight down 1000 units
+        float remaining = (destination - check).GetLengthSquared();
+        while (remaining > SquaredF(10.0f))
+        {
+            check += dir * 10.0f;
+            Vector down = check;
+            down.z -= 1000.0f;
 
             TraceLine(check, down, true, true, g_hostEntity, &tr);
+            float currentHeight = tr.flFraction * 1000.0f;
 
-            float height = tr.flFraction * 1000.0f; // height from ground
+            if (currentHeight < lastHeight - 18.0f)
+                return false; // drop is too big
 
-            // is the current height greater than the step height?
-            if (height < lastHeight - 18.0f)
-                return false; // can't get there without jumping...
-
-            lastHeight = height;
-            distance = (destination - check).GetLengthSquared(); // distance from goal
+            lastHeight = currentHeight;
+            remaining = (destination - check).GetLengthSquared();
         }
 
         return true;

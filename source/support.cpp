@@ -412,50 +412,50 @@ void FreeLibraryMemory(void)
 
 bool SetEntityAction(int index, int team, int action)
 {
-	int i;
-	if (index == -1)
-	{
-		for (i = 0; i < entityNum; i++)
-			SetEntityActionData(i);
-		return 1;
-	}
+    int i;
+    if (index == -1)
+    {
+        for (i = 0; i < entityNum; i++)
+            SetEntityActionData(i);
+        return true;
+    }
 
-	edict_t* entity = INDEXENT(index);
-	if (FNullEnt(entity) || !IsAlive(entity))
-		return -1;
+    edict_t* entity = INDEXENT(index);
+    if (FNullEnt(entity) || !IsAlive(entity))
+        return false;
 
-	if (IsValidPlayer(entity))
-		return -1;
+    if (IsValidPlayer(entity))
+        return false;
 
-	for (i = 0; i < entityNum; i++)
-	{
-		if (g_entityId[i] == index)
-		{
-			if (action != -1)
-			{
-				if (team != g_entityTeam[i] || action != g_entityAction[i])
-					SetEntityActionData(i, index, team, action);
-			}
-			else
-				SetEntityActionData(i);
+    for (i = 0; i < entityNum; i++)
+    {
+        if (g_entityId[i] == index)
+        {
+            if (action != -1)
+            {
+                if (team != g_entityTeam[i] || action != g_entityAction[i])
+                    SetEntityActionData(i, index, team, action);
+            }
+            else
+                SetEntityActionData(i);
 
-			return 1;
-		}
-	}
+            return true;
+        }
+    }
 
-	if (action == -1)
-		return -1;
+    if (action == -1)
+        return false;
 
-	for (i = 0; i < entityNum; i++)
-	{
-		if (g_entityId[i] == -1)
-		{
-			SetEntityActionData(i, index, team, action);
-			return 1;
-		}
-	}
+    for (i = 0; i < entityNum; i++)
+    {
+        if (g_entityId[i] == -1)
+        {
+            SetEntityActionData(i, index, team, action);
+            return true;
+        }
+    }
 
-	return -1;
+    return false;
 }
 
 void SetEntityActionData(int i, int index, int team, int action)

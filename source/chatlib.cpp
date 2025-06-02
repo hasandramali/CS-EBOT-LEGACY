@@ -108,7 +108,7 @@ void StripTags(char* buffer)
 // this function humanize player name (i.e. trim clan and switch to lower case (sometimes))
 char* HumanizeName(char* name)
 {
-    char outputName[256]; // create return name buffer
+    static char outputName[256]; // create return name buffer
     cstrncpy(outputName, name, sizeof(outputName)); // copy name to new buffer
 
     // drop tag marks, 75 percent of time
