@@ -1972,7 +1972,7 @@ bool Waypoint::IsNodeReachable(const Vector src, const Vector destination)
     if (!FNullEnt(tr.pHit) && cstrcmp("func_illusionary", STRING(tr.pHit->v.classname)) == 0)
         return false;
 
-    TraceLine(src, destination, static_cast<bool>(true), static_cast<bool>(false), g_hostEntity, &tr);
+    TraceLine(src, destination, true, false, g_hostEntity, &tr);
 
     bool goBehind = false;
     if (tr.flFraction >= 1.0f || (goBehind = IsBreakable(tr.pHit)) ||
@@ -2006,7 +2006,7 @@ bool Waypoint::IsNodeReachable(const Vector src, const Vector destination)
         {
             Vector down = check;
             down.z -= 1000.0f;
-            TraceLine(check, down, static_cast<bool>(true), static_cast<bool>(true), g_hostEntity, &tr);
+            TraceLine(check, down, true, true, g_hostEntity, &tr);
             lastHeight = tr.flFraction * 1000.0f;
         }
 
@@ -2017,7 +2017,7 @@ bool Waypoint::IsNodeReachable(const Vector src, const Vector destination)
             Vector down = check;
             down.z -= 1000.0f;
 
-            TraceLine(check, down, static_cast<bool>(true), static_cast<bool>(true), g_hostEntity, &tr);
+            TraceLine(check, down, true, true, g_hostEntity, &tr);
             float currentHeight = tr.flFraction * 1000.0f;
 
             if (currentHeight < lastHeight - 18.0f)
@@ -2052,8 +2052,7 @@ bool Waypoint::IsNodeReachableWithJump(const Vector src, const Vector destinatio
     if (!FNullEnt(tr.pHit) && cstrcmp("func_illusionary", STRING(tr.pHit->v.classname)) == 0)
         return false; // don't add pathnodes through func_illusionaries
 
-    // check if this waypoint is "visible"...
-    TraceLine(src, destination, static_cast<bool>(true), static_cast<bool>(false), g_hostEntity, &tr);
+    TraceLine(src, destination, true, false, g_hostEntity, &tr);
 
     // if waypoint is visible from current position (even behind head)...
     bool goBehind = false;
